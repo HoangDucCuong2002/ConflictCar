@@ -18,13 +18,19 @@ import { useNavigation } from '@react-navigation/native';
 const Home = () => {
   const navigation = useNavigation();
   const {user, setAuth} = useAuth();
-  const [cars, setCars] = useState([]); 
+  const [cars, setCars] = useState([]);
+  const [carLicensePlate, setCarLicensePlate] = useState(""); 
+  const [carId, setCarId] = useState("");
   // const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [services, setServices] = useState([]);
   const onSelectCar = (car) => {
-    console.log("Car selected:", car.license_plate, car.id);
+    // console.log("Car selected:", car.license_plate, car.id);
+    setCarLicensePlate(car.license_plate);
+    setCarId(car.id);
+    setModalVisible(false);
   };
+  
   const fetchCars = async () => {
       try {
           const response = await getCarData(user.id);
@@ -85,22 +91,18 @@ const Home = () => {
   ];
   const saveService = async (service) => {
     try {
-      // setModalVisible(true);
-      // if (!car) {
-      //   throw new Error('Car data is not available');
-      // }
-      
-      // const carLicensePlate = car.license_plate;
-      // const carId = car.id;
-    
-      setModalVisible(true);
+      if (!carLicensePlate || !carId) {
+        Alert.alert("Lỗi", "Vui lòng chọn một chiếc xe trước!");
+        setModalVisible(true);
+        return;
+      }
       const serviceData = {
         nameService: service.name,
         timeService: service.time,
         priceService: service.price,
         idService: service.id,
-        // carLicensePlate: carLicensePlate,
-        // carId: carId,
+        carLicensePlate: carLicensePlate,
+        carId: carId,
       };
       // console.log('Data', serviceData)
       router.push({
@@ -121,13 +123,17 @@ const Home = () => {
         <Pressable
           style={styles.bookButton}
           onPress={() => {
-            const service = {
-              name: item.name,
-              time: item.time,
-              price: item.price,
-              id: item.id,
-            };
-            saveService(service);
+            if (!carLicensePlate || !carId) {
+              setModalVisible(true);
+            } else {
+              const service = {
+                name: item.name,
+                time: item.time,
+                price: item.price,
+                id: item.id,
+              };
+              saveService(service);
+            }
           }}
         >
           <Text style={styles.bookButtonText}>Đặt ngay</Text>
@@ -144,7 +150,7 @@ const Home = () => {
         <View style={styles.header}>
           <Text style={styles.title}>Welcome {user?.name || 'Guest'} </Text>
           <View style={styles.icons}>
-            <Pressable onPress={() => router.push('notification')}>
+            <Pressable onPress={() => router.push('productscreen')}>
               <Icon name="heart" size={hp(3)} strokeWidth={2} color={theme.colors.text} />
             </Pressable>
                 <Pressable onPress={() => router.push('mycar')}>

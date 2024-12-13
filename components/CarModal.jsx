@@ -8,17 +8,16 @@ import {
 } from 'react-native';
 
 const CarModal = ({ visible, onClose, cars, onSelectCar }) => {
-    const [selectedCar, setSelectedCar] = useState(null); // Lưu trạng thái chiếc xe được chọn
+    const [selectedCar, setSelectedCar] = useState(null);
 
     const handleSelectCar = (car) => {
-        setSelectedCar(car);  // Cập nhật thông tin xe đã chọn
-        onSelectCar(car);  // Gọi hàm callback với thông tin xe (bao gồm cả id và biển số xe)
+        setSelectedCar(car);      
     };
 
     const handleSubmit = () => {
         if (selectedCar) {
-            // console.log("Đã chọn xe: ", selectedCar.license_plate, " với ID: ", selectedCar.id);
-            onClose();  // Đóng modal sau khi chọn
+            onSelectCar(selectedCar)
+            onClose();
         } else {
             alert("Vui lòng chọn một chiếc xe");
         }
@@ -41,7 +40,7 @@ const CarModal = ({ visible, onClose, cars, onSelectCar }) => {
                                 styles.carButton,
                                 selectedCar?.id === car.id && styles.selectedCarButton, // Thêm màu cho nút đã chọn
                             ]}
-                            onPress={() => handleSelectCar(car)}  // Gọi hàm chọn xe
+                            onPress={() => handleSelectCar(car)}  
                         >
                             <Text style={styles.carText}>{car.license_plate}</Text>
                         </TouchableOpacity>
@@ -52,7 +51,7 @@ const CarModal = ({ visible, onClose, cars, onSelectCar }) => {
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.submitButton}
-                            onPress={handleSubmit}  // Xử lý khi chọn và xác nhận
+                            onPress={handleSubmit}
                         >
                             <Text style={styles.buttonText}>Submit</Text>
                         </TouchableOpacity>

@@ -90,6 +90,22 @@ export const insertCar = async (userId, carData) => {
         return { success: false, msg: error.message };
     }
 };
+export const getAllAppointmentByDate = async (date) => {
+    try {
+        const { data, error } = await supabase
+        .from('appointment')
+        .eq('room_id', roomId)
+        .eq('day', date)
+
+        if (error) {
+            return {success: false, msg: error?.message}
+        }
+        return {success: true, data}
+    } catch (error) {
+        console.log('got error: ', error);
+        return {success: false, msg: error.message};
+    }
+}
 export const updateCarData = async (data, carId) => {
     console.log(carId);
     try {
@@ -108,16 +124,13 @@ export const updateCarData = async (data, carId) => {
         return {success: false, msg: error.message};
     }
 }
-export const getAppointmentData = async (userId, roomId, workingHourId, appointmentId) => {
+export const getAppointmentData = async (roomId, day) => {
     try {
         const { data, error } = await supabase
         .from('appointment')
-        .select('*')
-        .eq('id', appointmentId) 
-        .eq('day')     
-        // .eq('user_id', userId)
+        .select('workingHour_id')
+        .eq('day', day)     
         .eq('room_id', roomId)
-        .eq('workingHour_id', workingHourId)
         // .single();        
 
         if (error) {
@@ -276,3 +289,23 @@ export const insertWorkingHourData = async (workingHourData, roomId) => {
             return {success: false, msg: error.message};
         }
     }
+
+    export const uploadImage = async (fileName, filePath) => {
+        try {
+            const response = await fetch(filePath);  // Đảm bảo filePath là URL hợp lệ
+            const blob = await response.blob();  // Chuyển đổi hình ảnh thành Blob
+
+            const { data, error } = await supabase.storage
+                .from('product-images')
+                .upload(fileName, blob, { upsert: true });
+    
+            if (error) throw error;
+    
+            // Lấy URL công khai của hình ảnh đã tải lên
+            const { publicUrl } = supabase.storage.from('product-images').getPublicUrl(fileName);
+            return publicUrl;
+        } catch (err) {
+            console.error('Error uploading image:', err.message);
+            throw err;
+        }
+    };

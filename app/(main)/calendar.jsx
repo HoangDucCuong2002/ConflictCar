@@ -12,7 +12,7 @@ import Button from '../../components/Button';
 import Avatar from '../../components/Avatar';
 import moment from 'moment';
 import BottomSheetCalendar from '../BottomSheetCalendar';
-import { getWorkingHourData, insertWorkingHourData, insertAppointment } from '../../services/userService';
+import { getWorkingHourData, insertWorkingHourData, insertAppointment, getAppointmentData, AllAppointmentByDate } from '../../services/userService';
 import RoomSelectModal from '../../components/RoomSelectModal';
 
 const BookingCalendar = () => { 
@@ -23,19 +23,43 @@ const [selectedDate, setSelectedDate] = useState(null);
 const [days, setDays] = useState([]);
 const [dates, setDates] = useState([]);
 const router = useRouter();
+const [appointment, setAppointment] = useState(null);
+const [error, setError] = useState(null);
 const [selectedTimes, setSelectedTimes] = useState([]);
 const [showBottomSheet, setShowBottomSheet] = useState(false);
 const [showRoomSelectModal, setShowRoomSelectModal] = useState(false);
 const [selectedRoom, setSelectedRoom] = useState(null);
-
-const { nameService, timeService, priceService, idService } =useLocalSearchParams();
+const roomId = 1
+const day ="12-13-2024"
+const { nameService, timeService, priceService, idService, carLicensePlate,carId } =useLocalSearchParams();
 
 useEffect(() => {
   // console.log('nameService:', nameService);
   // console.log('timeService:', timeService);
-  // console.log('priceService:', priceService);
-  console.log('idService:', idService);
+  // console.log('carLicensePlate:', carLicensePlate);
+  // console.log('carID:', carId);
+  // console.log('idService:', idService);
 },[])
+useEffect(() => {
+  const fetchAppointment = async () => {
+    const response = await getAppointmentData(roomId, day);
+
+    if (response.success && response.data) {
+      // Chuyển đổi workingHour_id thành id
+      const formattedData = response.data.map((item) => ({
+        id: item.workingHour_id,
+      }));
+      console.log(formattedData);
+      setAppointment(formattedData);
+    } else {
+      setError(response.msg || "Không thể tải dữ liệu");
+      setAppointment(null);
+    }
+    setLoading(false);
+  };
+
+  fetchAppointment();
+}, [roomId, day]); 
 
 
 
@@ -48,30 +72,6 @@ useEffect(() => {
     setDates(initialDates);
   }
 }, [selectedDate]);
-
-
-// useEffect (() => {
-//   const getAppointmentData = async () => {
-//     setLoading(true);
-//     const { success, data, msg } = await getAppointmentData(userId, roomId, workingHourId, appointmentId);
-
-//     if (success) {
-//       setAppointmentData(data);
-//     } else {
-//       Alert.alert('Error', msg);
-//     }
-
-//     setLoading(false);
-//   };
-
-//   getAppointmentData();
-// }, [userId, roomId, workingHourId, appointmentId]);
-useEffect(() => {
-  const fetchAppointmentData = async () => {
-
-  }
-  fetchAppointmentData();
-},[])
 
 useEffect(() => {
   const fetchWorkingHourData = async () => {
@@ -106,7 +106,18 @@ useEffect(() => {
 
   fetchWorkingHourData();
 }, []);
+  const isWorkingHourAvailabe = async (roomId, day, workingHourId) => {
+    
+    const { success, data, msg } = await getAppointmentData(roomId, day);
 
+    if (!success) {
+      console.log("Error fetching appointment data:", msg);
+      return false;
+    }
+
+    const isFound = data.some(item => item.workingHour_id === workingHourId);
+    return !isFound;
+  }
   const handlePickRoom = () => {
     setShowRoomSelectModal(true);
   };
@@ -124,7 +135,7 @@ useEffect(() => {
   
     setSelectedDate(formattedSelectedDate);
     setShowBottomSheet(false);
-  
+    console.log('Selected Date:', selectedDate);
     const updatedDates = [...Array(4)].map((_, index) => {
       const currentDate = moment(formattedSelectedDate, 'DD-YYYY').add(index, 'days');
       return currentDate.format('DD-YYYY');
@@ -133,26 +144,30 @@ useEffect(() => {
   };
   const [showButtons, setShowButtons] = useState(false);
   
-  const areTimesAdjacent = (time1, time2) => {
-    const [start1, end1] = time1.split(' - ').map(time => moment(time, 'HH:mm'));
-    const [start2, end2] = time2.split(' - ').map(time => moment(time, 'HH:mm'));
-    return end1.isSame(start2) || end2.isSame(start1);
-  };
+  // const areTimesAdjacent = (time1, time2) => {
+  //   const [start1, end1] = time1.split(' - ').map(time => moment(time, 'HH:mm'));
+  //   const [start2, end2] = time2.split(' - ').map(time => moment(time, 'HH:mm'));
+  //   return end1.isSame(start2) || end2.isSame(start1);
+  // };
   
   const handleTimePress = (time, id) => {
-    if (selectedTimes.some(item => item.time === time)) {
-      setSelectedTimes((prevTimes) => prevTimes.filter((item) => item !== time));
+    // Kiểm tra xem thời gian đã được chọn chưa
+    const isSelected = selectedTimes.some(item => item.time === time);
+    
+    if (isSelected) {
+      setSelectedTimes((prevTimes) => prevTimes.filter((item) => item.time !== time));
       return;
     }
-      if (selectedTimes.length > 0) {
-        const lastSelectedTime = selectedTimes[selectedTimes.length - 1].time;
-
-      if (!areTimesAdjacent(lastSelectedTime, time)) {
-        Alert.alert("Error", "Vui Lòng chọn thời gian liên kề");
-        return;
-      }
+  
+    // Nếu chưa chọn, kiểm tra xem thời gian cuối cùng đã chọn có liền kề với thời gian hiện tại không
+    if (selectedTimes.length > 0) {
+      const lastSelectedTime = selectedTimes[selectedTimes.length - 1].time;
+      
+      // if (!areTimesAdjacent(lastSelectedTime, time)) {
+      //   Alert.alert("Error", "Vui Lòng chọn thời gian liên kề");
+      //   return;
+      // }
     }
-    
     setSelectedTimes((prevTimes) => [...prevTimes, { time, id }]);
   };
   const handleConfirmBooking = () => {
@@ -160,11 +175,22 @@ useEffect(() => {
       Alert.alert('Lỗi', 'Vui lòng chọn đầy đủ thông tin');
       return;
     }
-    const timeString = selectedTimes.join(', ');
-    console.log('Selected Times:', selectedTimes);
-    selectedTimes.forEach((item, index) => {
-      console.log(`selectedTimes[${index}]:`, item.id);
-    });
+    // console.log('Room:', selectedRoom);
+    // console.log('day', selectedDate)
+    // console.log('Selected Times:', selectedTimes);
+    // selectedTimes.forEach((item, index) => {
+    //   console.log(`selectedTimes[${index}]:`, item.id);
+    // });
+    const roomId = selectedRoom.id;
+
+    const combinedArray = selectedTimes.map(item => ({
+      day: selectedDate,
+      roomId: roomId,
+      id: item.id,
+      time: item.time,
+    }));
+
+    console.log(combinedArray);
     Alert.alert(
       "Xác nhận đặt lịch",
       `Bạn có muốn đặt lịch vào ngày ${selectedDate} không?`,
@@ -176,7 +202,7 @@ useEffect(() => {
         {
           text: "Confirm",
           onPress: async () => {
-            console.log(`Đặt lịch cho các khoảng thời gian vào ngày ${selectedDate}`);
+            // console.log(`Đặt lịch cho các khoảng thời gian vào ngày ${selectedDate}`);
             setSelectedTimes([]);
             // console.log('Selected Date:', selectedDate);
             // console.log('Selected Room:', selectedRoom.id);
@@ -251,7 +277,7 @@ useEffect(() => {
           <RoomSelectModal 
             modalVisible={showRoomSelectModal}
             onClose={() => setShowRoomSelectModal(false)}
-            onRoomSelect={handleRoomSelect} // Pass the handler to the modal
+            onRoomSelect={handleRoomSelect}
           />
         )}
         <View style={styles.row}>
@@ -301,23 +327,31 @@ useEffect(() => {
         />
       )}
 
-      {selectedDate && showButtons && (
+      {selectedDate && selectedRoom && showButtons && (
         <>  
           <Text style={styles.title}>Khoảng Thời Gian</Text>
           <View style={styles.buttonContainer}>
             {workingHours.map((workingHour, index) => {
               const timeRange = `${workingHour.start_time} - ${workingHour.end_time}`;
               const id = workingHour.id
+              const handlePress = async () => {
+                const isAvailable = await isWorkingHourAvailabe(roomId, day, workingHour.id);
+                if (!isAvailable) return;
+                handleTimePress(timeRange, id);
+              };
               return (
                 <Pressable
                   key={index}
                   style={[
                     styles.button,
                     selectedTimes.some(item => item.time === timeRange) && styles.selectedButton,
+                    // !isAvailable && styles.unavailableButton
                   ]}
-                  onPress={() => handleTimePress(timeRange, id)}
+                  onPress={handlePress}
+                  // disabled={!await isWorkingHourAvailabe(roomId, day, workingHour.id)}
+                  // disabled={!isWorkingHourAvailabe(workingHour.id)}
                 >
-                  <Text style={styles.buttonText}>{timeRange}</Text>
+                  <Text style={styles.buttonText}>{ timeRange}</Text>
                 </Pressable>
               );
             })}

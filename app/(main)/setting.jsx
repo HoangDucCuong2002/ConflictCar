@@ -17,7 +17,6 @@ const Setting = () => {
   const mapRef = useRef(null);
   const markersRef = useRef({}); // Object to store marker refs
 
-  // Get user location when component mounts
   useEffect(() => {
     const getLocation = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
